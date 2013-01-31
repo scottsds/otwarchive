@@ -4,49 +4,84 @@
 
 <!--subnav-->
 <!--/subnav-->
-
 <!--main content-->
-<h3 class="heading"><%= ts("Users") %></h3>
-<dl class="subscription index group">
-<% @sub_users.each do |subscription| %>
-  <dt>
-    <%= link_to(subscription.name, subscription.subscribable) %>
-  </dt>
-  <dd>
-    <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
-      <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
-    <% end %>
-  </dd>
-<% end %>
-</dl>
+  <% unless @sub_works.empty? %>
+  <%= form_for :subscription, {:controller => 'subscriptions_controller', :action => 'update_multiple', :method => :put} do %>
+    <div class="user listbox group" id="user-users-subscriptions">
+      <h3 class="heading"><%= ts("Works") %></h3>
+      <table id="users_works_subscriptions" summary="<%= ts("Listing of works to which you are subscribed.") %>">
+        <colgroup>
+          <col class="name"/>
+          <col span="4"/>
+        </colgroup>
+        <thead>
+        <tr>
+          <th scope="col"><%= ts("Title") %></th>
+          <th scope="col"><%= ts("Creator(s)") %></th>
+          <th scope="col"><%= ts("Completion Status") %></th>
+          <th scope="col"><%= ts("Email Only When Complete") %></th>
+          <th scope="col"><%= ts("Action") %></th>
+        </tr>
+        </thead>
+        <tbody>
+        <% @sub_works.each do |subscription| %>
+          <%= hidden_field_tag "subscription_ids[]", subscription.id %>
+          <tr id="work_<%= subscription.id %>">
+            <td><%= link_to(subscription.name, subscription.subscribable) %></td>
+            <td>
+              <% if %w(Work Series).include?(subscription.subscribable_type) %>
+                <%= ts("by %{names}", :names => byline(subscription.subscribable)).html_safe %>
+              <% else %>
+                <%= ts("by Unknown Creator") %>
+              <% end %>
+            </td>
+            <td><%= subscription.subscribable.complete? ? get_symbol_link("complete-yes iswip", "Complete #{subscription.subscribable.class.to_s}") : get_symbol_link("complete-no iswip", "#{subscription.subscribable.class.to_s} in Progress") %></td>
+            <td><%= check_box_tag :notify_when_complete %></td>
+            <td>
+              <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
+                <%= f.submit ts("Unsubscribe") %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+        </tbody>
+      </table>
+    </div>
+    <p class="submit actions"><%= submit_tag ts("Update Work Subscriptions") %></p>
+  <% end %>
+  <% end %>
 
-<h3 class="heading"><%= ts("Series") %></h3>
-<dl class="subscription index group">
-<% @sub_series.each do |subscription| %>
-  <dt>
-    <%= link_to(subscription.name, subscription.subscribable) %>
-  </dt>
-  <dd>
-    <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
-      <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
-    <% end %>
-  </dd>
+<% unless @sub_users.empty? %>
+  <div class="user listbox group" id="user-users-subscriptions">
+    <h3 class="heading"><%= ts("Users") %></h3>
+    <dl class="users subscription index group">
+      <% @sub_users.each do |subscription| %>
+        <dt>
+          <%= link_to(subscription.name, subscription.subscribable) %>
+        </dt>
+        <dd>
+          <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
+            <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
+          <% end %>
+        </dd>
+      <% end %>
+    </dl>
+  </div>
 <% end %>
-</dl>
-
-<h3 class="heading"><%= ts("Works") %></h3>
-<dl class="subscription index group">
-<% @sub_works.each do |subscription| %>
-  <dt>
-    <%= link_to(subscription.name, subscription.subscribable) %>
-    <% if %w(Work Series).include?(subscription.subscribable_type) %>
-      <%= ts("by %{names}", :names => byline(subscription.subscribable)).html_safe %>
-    <% end %>
-  </dt>
-  <dd>
-    <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
-      <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
-    <% end %>
-  </dd>
+<% unless @sub_series.empty? %>
+  <div class="series listbox group" id="user-series-subscriptions">
+    <h3 class="heading"><%= ts("Series") %></h3>
+    <dl class="subscription index group">
+      <% @sub_series.each do |subscription| %>
+        <dt>
+          <%= link_to(subscription.name, subscription.subscribable) %>
+        </dt>
+        <dd>
+          <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
+            <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
+          <% end %>
+        </dd>
+      <% end %>
+    </dl>
+  </div>
 <% end %>
-</dl>

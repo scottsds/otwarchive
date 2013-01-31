@@ -13,7 +13,8 @@ class SubscriptionsController < ApplicationController
   
   # GET /subscriptions
   # GET /subscriptions.xml
-  def index    
+  def index
+    @subscriptions = @user.subscriptions.includes(:subscribable)
     subscriptions = @user.subscriptions.includes(:subscribable)
     @sub_series, rest = subscriptions.partition{ |s| s.subscribable_type == "Series"}
     @sub_users, @sub_works = rest.partition{ |r| r.subscribable_type == "User"}
@@ -34,6 +35,28 @@ class SubscriptionsController < ApplicationController
       else
         format.html { render :action => "new" }
       end
+    end
+  end
+
+  # PUT /subscriptions
+  def update_multiple
+    @user = current_user
+    @subscriptions = Subscription.where(:id => params[:subscription_ids]).readonly(false)
+    @errors = []
+    # to avoid overwriting, we entirely trash any blank fields and also any unchecked checkboxes
+    subscription_params = params[:subscription].reject {|key,value| value.blank? || value == "0"}
+    @subscriptions.each do |subscription|
+      # now we can just update each work independently, woo!
+      unless @subscription.update_attributes(subscription_params)
+        @errors << ts("The subscription %{title} could not be updated: %{error}", :title => @subscription.name, :error => @subscription.errors_on.to_s)
+      end
+    end
+    unless @errors.empty?
+      setflash; flash[:error] = ts("There were problems editing some subscriptions: %{errors}", :errors => @errors.join(", "))
+      redirect_to user_subscriptions_path(@user)
+    else
+      setflash; flash[:notice] = ts("Your edits were put through! Please check over the subscriptions to make sure everything is right.")
+      redirect_to user_subscriptions_path(@user)
     end
   end
 
