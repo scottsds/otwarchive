@@ -58,7 +58,7 @@ gem 'permit_yo'
 gem "escape_utils"
 
 # enable debugging with "rails server -u" or "rails server --debugger"
-gem 'ruby-debug19', :require => 'ruby-debug'
+gem 'debugger'
 
 gem 'jquery-rails', '>= 0.2.6'
 
@@ -80,10 +80,9 @@ group :test do
   gem 'pickle'
   gem 'shoulda'
   gem 'factory_girl'
-  gem 'capybara', '=0.3.9'
+  gem 'capybara'
   gem 'database_cleaner', '>=0.6.0.rc.3'
-  gem 'cucumber-rails'
-  gem 'cucumber', '>=1.0.0'
+  gem 'cucumber-rails', :require => false
   gem 'gherkin', '>=2.4.1' 
   gem 'launchy'    # So you can do Then show me the page
   # automatically record http requests and save them to make
@@ -91,6 +90,8 @@ group :test do
   gem 'fakeweb'
   gem 'vcr'
   gem 'delorean'
+  gem 'sauce-cucumber', :require => false
+  gem 'sauce-connect'
 end
 
 # Deploy with Capistrano
