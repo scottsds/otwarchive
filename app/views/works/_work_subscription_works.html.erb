@@ -1,22 +1,22 @@
 <% unless @sub_works.empty? %>
-    <div class="user listbox group" id="user-works-subscriptions">
-      <h3 class="heading"><%= ts("Works") %></h3>
+  <div class="user listbox group" id="user-works-subscriptions">
+    <h3 class="heading"><%= ts("Works") %></h3>
       <dl class="work subscription index group">
         <% @sub_works.each do |subscription| %>
-            <dt>
-              <%= link_to(subscription.name, subscription.subscribable) %>
-            </dt>
-            <dd>
-              <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
-                  <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
-              <% end %>
-            </dd>
-            <dt>
-              <%= subscription.subscribable.complete? ? get_symbol_link("complete-yes iswip", "(Complete #{subscription.subscribable.class.to_s})") : get_symbol_link("complete-no iswip", "(#{subscription.subscribable.class.to_s} in Progress)") %>
-            </dt>
-            <dd>
-              <%= check_box_tag :notify_when_complete %>
-            </dd>
+          <dt>
+            <%= link_to(subscription.name, subscription.subscribable) %>
+          </dt>
+          <dd>
+            <%= form_for [current_user, subscription], :html => {:method => :delete} do |f| %>
+              <%= f.submit ts("Unsubscribe from %{name}", :name => subscription.name) %>
+            <% end %>
+          </dd>
+          <dt>
+            <%= subscription.subscribable.complete? ? get_symbol_link("complete-yes iswip", "(Complete #{subscription.subscribable.class.to_s})") : get_symbol_link("complete-no iswip", "(#{subscription.subscribable.class.to_s} in Progress)") %>
+          </dt>
+          <dd>
+            <%= check_box_tag :notify_when_complete %>
+          </dd>
         <% end %>
       </dl>
     </div>
