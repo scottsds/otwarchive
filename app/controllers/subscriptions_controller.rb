@@ -13,8 +13,11 @@ class SubscriptionsController < ApplicationController
   
   # GET /subscriptions
   # GET /subscriptions.xml
-  def index    
+  def index
     @subscriptions = @user.subscriptions.includes(:subscribable)
+    subscriptions = @user.subscriptions.includes(:subscribable)
+    @sub_series, rest = subscriptions.partition{ |s| s.subscribable_type == "Series"}
+    @sub_users, @sub_works = rest.partition{ |r| r.subscribable_type == "User"}
   end
 
   # POST /subscriptions
