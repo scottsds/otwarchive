@@ -242,7 +242,11 @@ Otwarchive::Application.routes.draw do
     resources :signups, :controller => "challenge_signups", :only => [:index]
     resources :skins, :only => [:index]
     resources :stats, :only => [:index]
-    resources :subscriptions, :only => [:index, :create, :destroy]
+    resources :subscriptions do
+      collection do
+        put :email_completed
+      end
+    end
     resources :tag_sets, :controller => "owned_tag_sets", :only => [:index]    
     resources :works do
       collection do

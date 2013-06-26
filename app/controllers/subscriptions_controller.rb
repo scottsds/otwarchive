@@ -38,6 +38,11 @@ class SubscriptionsController < ApplicationController
     end
   end
 
+  # POST /subscriptions/1 ?
+  def email_completed
+    Subscription.update_all(["notify_when_complete=?", :id => params[:subscription_ids]])
+  end
+
   # DELETE /subscriptions/1
   # DELETE /subscriptions/1.xml
   def destroy

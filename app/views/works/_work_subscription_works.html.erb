@@ -1,8 +1,10 @@
 <% unless @sub_works.empty? %>
-  <div class="user listbox group" id="user-works-subscriptions">
-    <h3 class="heading"><%= ts("Works") %></h3>
+  <% form_tag email_completed_user_subscription_path, :method => :put do %>
+
+    <div class="user listbox group" id="user-works-subscriptions">
+      <h3 class="heading"><%= ts("Works") %></h3>
       <dl class="work subscription index group">
-        <% @sub_works.each do |subscription| %>
+        <% @sub_works.each do |subscription| %>>
           <dt>
             <%= link_to(subscription.name, subscription.subscribable) %>
           </dt>
@@ -12,12 +14,16 @@
             <% end %>
           </dd>
           <dt>
+          <dt><%= hidden_field_tag "subscription_ids[]", subscription.id %></dt>
             <%= subscription.subscribable.complete? ? get_symbol_link("complete-yes iswip", "(Complete #{subscription.subscribable.class.to_s})") : get_symbol_link("complete-no iswip", "(#{subscription.subscribable.class.to_s} in Progress)") %>
           </dt>
           <dd>
-            <%= check_box_tag :notify_when_complete %>
+            <%= check_box_tag "subscription_ids[]", subscription.id %>
           </dd>
         <% end %>
       </dl>
     </div>
+    <%= submit_tag "Update Subscription Email Notifications" %>
+  <% end %>
+
 <% end %>
