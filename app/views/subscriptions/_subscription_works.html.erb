@@ -1,5 +1,5 @@
 <% unless @sub_works.empty? %>
-  <% form_tag email_completed_user_subscription_path, :method => :put do %>
+
 
     <div class="user listbox group" id="user-works-subscriptions">
       <h3 class="heading"><%= ts("Works") %></h3>
@@ -23,7 +23,6 @@
         <% end %>
       </dl>
     </div>
-    <%= submit_tag "Update Subscription Email Notifications" %>
-  <% end %>
+
 
 <% end %>

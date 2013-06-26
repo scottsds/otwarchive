@@ -6,10 +6,15 @@
 <!--/subnav-->
 
 <!--main content-->
-<!-- work blurbs -->
-<%= render 'works/work_subscription_works' %>
-<!-- user blurbs -->
-<%= render 'works/work_subscription_users' %>
-<!-- series blurbs -->
-<%= render 'works/work_subscription_series' %>
+<% unless @sub_series.empty? && @sub_users.empty? && @sub_works.empty? %>
+  <% form_tag email_completed_user_subscription_path do %>
+    <!-- work blurbs -->
+    <%= render 'subscriptions/subscription_works' %>
+    <!-- user blurbs -->
+    <%= render 'subscriptions/subscription_users' %>
+    <!-- series blurbs -->
+    <%= render 'subscriptions/subscription_series' %>
+    <%= submit_tag "Submit" %>
+  <% end %>
+<% end %>
 
