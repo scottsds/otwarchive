@@ -7,4 +7,25 @@ class HelpController < ApplicationController
 
   def preferences_locale
   end
+
+  def skins_basics
+  end
+
+  def skins_creating
+  end
+
+  def skins_parents
+  end
+
+  def symbols_key
+  end
+
+  def tags_fandoms
+  end
+
+  def tags_ratings
+  end
+
+  def tags_warnings
+  end
 end
