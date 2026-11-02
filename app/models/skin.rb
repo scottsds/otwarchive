@@ -55,13 +55,13 @@ class Skin < ApplicationRecord
   # i18n-tasks-use t("errors.attributes.icon.invalid_format")
   # i18n-tasks-use t("errors.attributes.icon.too_large")
   validates :icon, attachment: {
-    allowed_formats: %r{image/\S+},
+    allowed_formats: %w[image/gif image/jpeg image/png],
     maximum_size: ArchiveConfig.ICON_SIZE_KB_MAX.kilobytes
   }
 
   after_save :skin_invalidate_cache
   def skin_invalidate_cache
-    skin_chooser_expire_cache
+    skin_chooser_expire_cache if saved_change_to_in_chooser? || in_chooser?
     skin_cache_version_update(id)
 
     # Work skins can't have children, but site skins (which have type nil)

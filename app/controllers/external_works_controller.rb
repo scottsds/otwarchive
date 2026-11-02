@@ -4,6 +4,7 @@ class ExternalWorksController < ApplicationController
   before_action :check_user_status, only: [:new]
 
   def new
+    @page_subtitle = t(".page_title")
     @bookmarkable = ExternalWork.new
     @bookmark = Bookmark.new
   end
@@ -50,7 +51,7 @@ class ExternalWorksController < ApplicationController
     @external_work.attributes = work_params
     if @external_work.update(external_work_params)
       flash[:notice] = t(".successfully_updated")
-      redirect_to(@external_work)
+      redirect_to external_work_path(@external_work)
     else
       render action: "edit"
     end

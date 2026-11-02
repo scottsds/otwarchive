@@ -19,23 +19,28 @@
     <% end %>
 
     <% if @previous_admin_post %>
-      <li><%= link_to("Previous Post", @previous_admin_post) %></li>
+      <li><%= link_to(@previous_admin_post.posted? ? t(".actions.previous_post") : t(".actions.previous_draft"), @previous_admin_post) %></li>
     <% end %>
 
     <% if @next_admin_post %>
-      <li><%= link_to("Next Post", @next_admin_post) %></li>
+      <li><%= link_to(@next_admin_post.posted? ? t(".actions.next_post") : t(".actions.next_draft"), @next_admin_post) %></li>
     <% end %>
 
     <% if @admin_post %>
-      <li><%= link_to ts('Back to AO3 News Index'), admin_posts_path %></li>
+      <% if @admin_post.posted? %>
+        <li><%= link_to t(".news_index"), admin_posts_path %></li>
+      <% else %>
+        <li><%= link_to t(".draft_news_index"), drafts_admin_posts_path %></li>
+      <% end %>
     <% end %>
 
-    <% if @work && !is_author_of?(@work) && !blocked_by?(@work) && !logged_in_as_admin? %>
+    <% kudos_target = @admin_post || @work %>
+    <% if !logged_in_as_admin? && (@admin_post || (@work && !is_author_of?(@work) && !blocked_by?(@work))) %>
       <li>
-        <%= form_for(:kudo, url: kudos_path, html: { method: 'post', id: 'new_kudo' }) do |kudo_form| %>
-          <%= kudo_form.hidden_field :commentable_id, :value => @work.id %>
-          <%= kudo_form.hidden_field :commentable_type, :value => 'Work' %>
-          <%= kudo_form.submit ts("Kudos ♥"), :id => 'kudo_submit' %>
+        <%= form_for(:kudo, url: kudos_path, html: { method: "post", id: "new_kudo" }) do |kudo_form| %>
+          <%= kudo_form.hidden_field :commentable_id, value: kudos_target.id %>
+          <%= kudo_form.hidden_field :commentable_type, value: @admin_post ? "AdminPost" : "Work" %>
+          <%= kudo_form.submit t(".kudos"), id: "kudo_submit" %>
         <% end %>
       </li>
     <% end %>
@@ -72,8 +77,8 @@
   <div id="kudos_message"></div>
   <%= flash_div :kudos_error, :kudos_notice %>
 
-  <% if @work && (@chapter.blank? || @chapter.posted?) %>
-    <%= render "kudos/kudos", :kudos => @kudos, :guest_kudos_count => @work.guest_kudos_count, :commentable => @work %>
+  <% if kudos_target && (@chapter.blank? || @chapter.posted?) %>
+    <%= render "kudos/kudos", kudos: @kudos, guest_kudos_count: kudos_target.guest_kudos_count, commentable: kudos_target %>
   <% end %>
 
 

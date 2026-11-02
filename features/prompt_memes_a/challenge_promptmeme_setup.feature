@@ -3,7 +3,7 @@ Feature: Prompt Meme Challenge
   In order to have an archive full of works
   As a humble user
   I want to create a prompt meme and post to it
-  
+
   Scenario: Can create a collection to house a prompt meme
   
   Given I have standard challenge tags setup
@@ -21,6 +21,17 @@ Feature: Prompt Meme Challenge
   Given I have standard challenge tags setup
   When I create Battle 12 promptmeme
   Then Battle 12 prompt meme should be correctly created
+
+  Scenario: Prompt meme timezone updates without caching
+  
+  Given I have Battle 12 prompt meme fully set up
+    And I am logged in as "scott"
+  When the user "scott" sets the time zone to "Nairobi"
+    And I go to the Collections page
+  Then I should see "EAT" within ".collection.picture.index.group .userstuff.summary"
+  When the user "scott" sets the time zone to "Mumbai"
+    And I go to the Collections page
+  Then I should see "IST" within ".collection.picture.index.group .userstuff.summary"
 
   Scenario: User can see a prompt meme
   
@@ -488,3 +499,62 @@ Feature: Prompt Meme Challenge
     And I view prompts for "Battle 12"
     # TODO: Refactor this test once we have a new Capybara version so that we look for .exact(Claim)
   Then I should see "Drop Claim"
+
+  Scenario: HTML escape chars in prompt title display properly
+
+  Given I have single-prompt prompt meme fully set up
+  When I am logged in as "escapecharsfan"
+    And I sign up for "Battle 12" with combination ESCAPE_CHARS
+  When I view my signup for "Battle 12"
+  Then I should see "These & < > ' ? are some HTML escape chars"
+  When I view my signup for "Battle 12"
+    And I follow "Edit Sign-up"
+  Then I should see "These & < > ' ? are some HTML escape chars" in the "challenge_signup_requests_attributes_0_title" input
+    And I should see "Request 1"
+  When I view my signup for "Battle 12"
+    And I follow "Edit Prompt"
+  Then I should see "These & < > ' ? are some HTML escape chars" in the "prompt_title" input
+    And I should see "Request 1"
+
+  When I am logged in as "claimer"
+    And I view prompts for "Battle 12"
+  Then I should see "These & < > ' ? are some HTML escape chars"
+  When I claim a prompt from "Battle 12"
+    And I go to the "Battle 12" claims page for the current user
+  Then I should see "These & < > ' ? are some HTML escape chars"
+  When I go to claimer's claims page
+  Then I should see "These & < > ' ? are some HTML escape chars"
+
+  When I am logged in as "mod1"
+    And I view unposted claims for "Battle 12"
+  Then I should see "These & < > ' ? are some HTML escape chars"
+
+  @javascript
+  Scenario: Can hide and show warnings on a prompt
+    Given I have Battle 12 prompt meme fully set up
+      And I follow "Challenge Settings"
+      And I enable archive warning challenge options
+      And I sign up for Battle 12 with combination F
+    When I am logged in as "myname2"
+      And I set my preferences to hide warnings
+      And I go to "Battle 12" collection's page
+      And I follow "Prompts"
+    Then I should see "Show warnings"
+      And I should not see "No Archive Warnings Apply" within "li.warnings"
+    When I follow "Show warnings"
+    Then I should not see "Show warnings"
+      And I should see "No Archive Warnings Apply" within "li.warnings"
+
+  @javascript
+  Scenario: Can hide and show additional tags on a prompt
+    Given I have Battle 12 prompt meme fully set up
+      And I sign up for Battle 12 with combination A
+    When I am logged in as "myname2"
+      And I set my preferences to hide freeform
+      And I go to "Battle 12" collection's page
+      And I follow "Prompts"
+    Then I should see "Show additional tags"
+      And I should not see "Alternate Universe - Historical"
+    When I follow "Show additional tags"
+    Then I should not see "Show additional tags"
+      And I should see "Alternate Universe - Historical"

@@ -4,10 +4,10 @@ module ApplicationHelper
 
   # TODO: Official recommendation from Rails indicates we should switch to
   # unobtrusive JavaScript instead of using anything like `link_to_function`
-  def link_to_function(name, *args, &block)
+  def link_to_function(name, *args)
     html_options = args.extract_options!.symbolize_keys
 
-    function = block_given? ? update_page(&block) : args[0] || ''
+    function = args[0] || ""
 
     onclick = "#{"#{html_options[:onclick]}; " if html_options[:onclick]}#{function}; return false;"
     href = html_options[:href] || 'javascript:void(0)'
@@ -19,9 +19,10 @@ module ApplicationHelper
   def classes_for_main
     class_names = controller.controller_name + '-' + controller.action_name
 
-    show_sidebar = ((@user || @admin_posts || @collection || show_wrangling_dashboard) && !@hide_dashboard)
-    class_names += " dashboard" if show_sidebar
-
+    # Rails/HelperInstanceVariable is disabled for the the following line given this warning is raised for reusing helpers. This function is only used once in application.html.erb
+    # Whether or not the sidebar should be shown
+    class_names += " dashboard" if !@hide_dashboard && (@user || @admin_posts || @collection || show_wrangling_dashboard) # rubocop:disable Rails/HelperInstanceVariable
+    # Whether or not the page will have filters
     class_names += " filtered" if page_has_filters?
 
     case controller.controller_name
@@ -58,7 +59,8 @@ module ApplicationHelper
   end
 
   def page_has_filters?
-    @facets.present? || (controller.action_name == 'index' && controller.controller_name == 'collections') || (controller.action_name == 'unassigned' && controller.controller_name == 'fandoms')
+    # This function is currently only used for classes_for_main, the linting error is disabled for the same reason
+    @facets.present? || (@sort_and_filter && controller.controller_name == "collections") || (controller.action_name == "unassigned" && controller.controller_name == "fandoms") # rubocop:disable Rails/HelperInstanceVariable
   end
 
   # This is used to make the current page we're on (determined by the path or by the specified condition) a span with class "current" and it allows us to add a title attribute to the link or the span
@@ -76,9 +78,14 @@ module ApplicationHelper
   def allowed_html_instructions(strip_images: false)
     # i18n-tasks-use t("application_helper.text_limited_html")
     # i18n-tasks-use t("application_helper.text_limited_html_strip_images_html")
-    t(strip_images ? "application_helper.text_limited_html_strip_images_html" : "application_helper.text_limited_html", help_link: link_to_help("html-help"))
+    t(strip_images ? "application_helper.text_limited_html_strip_images_html" : "application_helper.text_limited_html", help_link: link_to_help_modal(help_html_path, t("application_helper.allowed_html_instructions.html_help_title")))
   end
-  
+
+  # Returns instructions and help button that is shown above the RTE window
+  def rich_text_instructions
+    t("application_helper.rich_text_instructions.type_paste_rich_text_html", help_link: link_to_help_modal(help_rte_path, t("application_helper.rich_text_instructions.rte_help_title")))
+  end
+
   def link_to_modal(content = "", options = {})
     options[:class] ||= ""
     options[:for] ||= ""
@@ -566,7 +573,7 @@ module ApplicationHelper
   def tos_exempt_page?
     case params[:controller]
     when "home"
-      %w[index content dmca privacy tos tos_faq].include?(params[:action])
+      %w[index content privacy takedown tos tos_faq].include?(params[:action])
     when "abuse_reports", "feedbacks", "users/sessions"
       %w[new create].include?(params[:action])
     when "archive_faqs"

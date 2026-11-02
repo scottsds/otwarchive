@@ -60,6 +60,22 @@ Feature: Gift Exchange Challenge
     When I view open challenges
     Then I should see "My Gift Exchange"
 
+  Scenario: Gift exchange blurb cache is expired when the collection changes
+    Given I am logged in as "mod1"
+      And I have created the gift exchange "My Gift Exchange"
+    When I go to the collections page
+      Then I should see "My Gift Exchange"
+    When I am on "My Gift Exchange" collection edit page
+      And I check "This collection is anonymous"
+      And I submit
+    When I follow "Collections"
+    # Change not visible yet because not reindexed
+    Then I should not see "Anonymous" within ".blurb"
+    When all indexing jobs have been run
+      And I reload the page
+    # Reindexed and cache busted
+    Then I should see "Anonymous" within ".blurb"
+
   Scenario: Change timezone for a gift exchange
     Given time is frozen at 1/1/2019
       And the gift exchange "My Gift Exchange" is ready for signups
@@ -156,6 +172,62 @@ Feature: Gift Exchange Challenge
       And I submit
     Then I should see "Offer URL does not appear to be a valid URL."
 
+  Scenario: Custom URL and description labels are used in emails when available
+    Given the gift exchange "Awesome Gift Exchange" is ready for signups
+      And I edit settings for "Awesome Gift Exchange" challenge
+      And I check "gift_exchange[request_restriction_attributes][url_allowed]"
+      And I fill in "gift_exchange[request_url_label]" with "Custom Request URL Label"
+      And I fill in "gift_exchange[request_description_label]" with "Custom Request Description Label"
+      And I submit
+    When I am logged in as "myname1"
+      And I sign up for "Awesome Gift Exchange" with combination A
+      And I follow "Edit Sign-up"
+      And I fill in "Custom Request URL Label" with "https://example.com/myname1_prompt"
+      And I fill in "Custom Request Description Label" with "myname1 wrote a description!"
+      And I submit
+    When I am logged in as "myname2"
+      And I sign up for "Awesome Gift Exchange" with combination B
+      And I follow "Edit Sign-up"
+      And I fill in "Custom Request URL Label" with "https://example.com/myname2_prompt"
+      And I fill in "Custom Request Description Label" with "myname2 wrote a description!"
+      And I submit
+    When I am logged in as "mod1"
+      And I have generated matches for "Awesome Gift Exchange"
+    When I press "Send Assignments"
+    Then I should see "Assignments are now being sent out"
+    When I reload the page
+    Then I should not see "Assignments are now being sent out"
+      And 1 email should be delivered to "myname1"
+      And the email should contain "Custom Request URL Label"
+      And the email should contain "Custom Request Description Label"
+
+  Scenario: When custom URL and description labels aren't set, the default values for them show up in emails
+    Given the gift exchange "Awesome Gift Exchange" is ready for signups
+      And I edit settings for "Awesome Gift Exchange" challenge
+      And I check "gift_exchange[request_restriction_attributes][url_allowed]"
+      And I submit
+    When I am logged in as "myname1"
+      And I sign up for "Awesome Gift Exchange" with combination A
+      And I follow "Edit Sign-up"
+      And I fill in "Prompt URL:" with "https://example.com/myname1_prompt"
+      And I fill in "Description:" with "myname1 wrote a description!"
+      And I submit
+    When I am logged in as "myname2"
+      And I sign up for "Awesome Gift Exchange" with combination B
+      And I follow "Edit Sign-up"
+      And I fill in "Prompt URL:" with "https://example.com/myname2_prompt"
+      And I fill in "Description:" with "myname2 wrote a description!"
+      And I submit
+    When I am logged in as "mod1"
+      And I have generated matches for "Awesome Gift Exchange"
+    When I press "Send Assignments"
+    Then I should see "Assignments are now being sent out"
+    When I reload the page
+    Then I should not see "Assignments are now being sent out"
+      And 1 email should be delivered to "myname1"
+      And the email should contain "Prompt URL"
+      And the email should contain "Description"
+
   Scenario: Sign-ups can be seen in the dashboard
     Given the gift exchange "Awesome Gift Exchange" is ready for signups
     When I am logged in as "myname1"
@@ -223,6 +295,42 @@ Feature: Gift Exchange Challenge
     When I reload the page
     Then I should see "Reviewing Assignments"
       And I should see "Complete"
+
+  Scenario: When no potential matches can be generated, the Matching page and notification emails reflect that
+    Given a locale with translated emails
+      And I create the gift exchange "OneFandomToMatch" with the following options
+        | value      | minimum | maximum | match |
+        | prompts    | 1       | 1       | 1     |
+        | fandoms    | 1       | 1       | 1     |
+      And the user "moderator" enables translated emails
+      And I have added a co-moderator "mod2" to collection "OneFandomToMatch"
+    When the user "badgirlsdoitwell" signs up for "OneFandomToMatch" with the following prompts
+        | type    | characters | fandoms  | freeforms | ratings | categories |
+        | request |            | the show |           |         |            |
+        | offer   |            | the show |           |         |            |
+      And the user "sweetiepie" signs up for "OneFandomToMatch" with the following prompts
+        | type    | characters | fandoms  | freeforms | ratings | categories |
+        | request |            | the book |           |         |            |
+        | offer   |            | the book |           |         |            |
+    When I close signups for "OneFandomToMatch"
+      And I follow "Matching"
+      And I press "Generate Potential Matches"
+    Then I should see "Beginning generation of potential matches."
+      And 1 email should be delivered to "moderator"
+      And the email to "moderator" should be translated
+      And the email should contain "there were no potential matches found"
+      And the email should contain "you are an owner or moderator of the collection"
+      And 1 email should be delivered to "mod2"
+      And the email to "mod2" should be non-translated
+      And the email should contain "there were no potential matches found"
+      And the email should contain "you are an owner or moderator of the collection"
+    When I reload the page
+    Then I should see "No Potential Matches"
+      And I should see "No potential matches were found."
+    When I edit settings for "OneFandomToMatch" challenge
+      And I submit
+      And I follow "Matching"
+    Then I should see "No potential matches yet!"
 
   Scenario: Invalid signups are caught before generation and a translated email is sent
     Given the gift exchange "Awesome Gift Exchange" is ready for matching
@@ -639,6 +747,29 @@ Feature: Gift Exchange Challenge
     Then I should see "My Assignments"
       And I should not see "Awesome Gift Exchange"
 
+  Scenario: Draft Assignments are displayed as draft and use the creation date instead of the publication date
+    Given everyone has their assignments for "Non Confusing Exchange"
+      And it is currently 4/13/2016
+    When I am logged in as "myname1"
+      And I go to the assignments page for "myname1"
+    Then I should see "My Assignments"
+      And I should see "Non Confusing Exchange"
+    When I follow "Fulfill"
+      And I fill in the basic work information for "InProgress"
+      And I set the publication date to 6 December 2012
+      And I press "Preview"
+      And I go to the assignments page for "myname1"
+    Then I should see "(Draft)"
+      And I should see "Status: Unposted"
+      And I should see "Created: 2016-04-13"
+    When I post the work "InProgress"
+      And I go to the assignments page for "myname1"
+      And I follow "Completed Assignments"
+    Then I should see "InProgress"
+      And I should not see "(Draft)"
+      And I should see "Status: Complete"
+      And I should see "Posted: 2012-12-06"
+
   Scenario: A mod can purge assignments after they have been sent, but must
   first confirm the action
     Given everyone has their assignments for "Bad Gift Exchange"
@@ -749,3 +880,63 @@ Feature: Gift Exchange Challenge
     Then I should see "collection_1"
     When I follow "2" within ".pagination"
     Then I should see "collection_2"
+    When there are 20 assignments per page
+      And I reload the page
+    Then I should see "My Assignments"
+      But I should not see "collection_2"
+
+  Scenario: Mod can approve a posted assignment in a moderated gift exchange
+    Given everyone has their assignments for "Awesome Gift Exchange"
+      And I make the collection "Awesome Gift Exchange" moderated
+    When I am logged in as "myname1"
+      And I fulfill my assignment
+    When I am logged in as "mod1"
+      And I go to the "Awesome Gift Exchange" assignments page
+      And I follow "Open"
+    Then I should see "myname1"
+      And I should see "Approve"
+    When I check "Approve"
+      And I press "Submit"
+    Then I should see "Assignment updates complete!"
+    When I follow "Open"
+    Then I should not see "Approve"
+    When I follow "Complete"
+    Then I should see "Fulfilled Story" 
+
+  @javascript
+  Scenario: Can hide and show warnings on a request
+    Given I have set up the gift exchange "Awesome Gift Exchange"
+      And I check "Sign-up open?"
+      And I check "Requests visible?"
+      And I allow warnings in my gift exchange
+      And I submit
+      And I start signing up for "Awesome Gift Exchange"
+      And I check "No Archive Warnings Apply"
+      And I submit
+    When I am logged in as "myname2"
+      And I set my preferences to hide warnings
+      And I go to "Awesome Gift Exchange" collection's page
+      And I follow "Requests Summary"
+    Then I should see "Show warnings"
+      And I should not see "No Archive Warnings" within "li.warnings"
+    When I follow "Show warnings"
+    Then I should not see "Show warnings"
+      And I should see "No Archive Warnings" within "li.warnings"
+
+  @javascript
+  Scenario: Can hide and show additional tags on a request
+    Given the gift exchange "Awesome Gift Exchange" is ready for signups
+      And I am logged in as "mod1"
+      And I go to "Awesome Gift Exchange" gift exchange edit page
+      And I check "Requests visible?"
+      And I submit
+      And I sign up for "Awesome Gift Exchange" with combination A
+    When I am logged in as "myname2"
+      And I set my preferences to hide freeform
+      And I go to "Awesome Gift Exchange" collection's page
+      And I follow "Requests Summary"
+    Then I should see "Show additional tags"
+      And I should not see "Alternate Universe - Historical"
+    When I follow "Show additional tags"
+    Then I should not see "Show additional tags"
+      And I should see "Alternate Universe - Historical"

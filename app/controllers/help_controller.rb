@@ -1,31 +1,54 @@
 class HelpController < ApplicationController
+  HELP_ACTIONS = %i[
+    chapters_title
+    collectibles_add_to_collection
+    csv_download
+    first_login
+    html
+    people_search_all_fields
+    preferences_collection
+    preferences_comment
+    preferences_display
+    preferences_locale
+    preferences_misc
+    preferences_privacy
+    preferences_work_title_format
+    privacy_moderated_commenting
+    privacy_restricted_commenting
+    privacy_restricted_work
+    rte
+    skins_basics
+    skins_creating
+    skins_parents
+    symbols_key
+    tag_sets_about
+    tag_sets_associations
+    tag_sets_batch_load
+    tags_additional
+    tags_categories
+    tags_characters
+    tags_fandoms
+    tags_ratings
+    tags_relationships
+    tags_search_results
+    tags_search_text
+    tags_warnings
+    works_assignment
+    works_backdating
+    works_languages
+    works_parents
+    works_recipients
+    works_series
+    works_skins
+    works_translation_link
+  ].freeze
+
   before_action :users_only, only: [:first_login]
   layout proc { |controller| controller.request.xhr? ? false : "application" } # rubocop:disable Lint/AmbiguousBlockAssociation
 
-  def first_login
-  end
-
-  def preferences_locale
-  end
-
-  def skins_basics
-  end
-
-  def skins_creating
-  end
-
-  def skins_parents
-  end
-
-  def symbols_key
-  end
-
-  def tags_fandoms
-  end
-
-  def tags_ratings
-  end
-
-  def tags_warnings
+  HELP_ACTIONS.each do |action|
+    define_method(action) do
+      # Intentionally empty block for help actions
+    end
   end
 end

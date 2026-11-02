@@ -105,6 +105,12 @@ describe Collection do
       expect { create(:collection, open_doors: nil) }
         .to raise_error(ActiveRecord::NotNullViolation)
     end
+
+    it "raises error when duplicate database inserts happen despite Rails validations" do
+      create(:collection, name: "taken")
+      expect { create_invalid(:collection, name: "taken") }
+        .to raise_error(ActiveRecord::RecordNotUnique)
+    end
   end
 
   describe "#clear_icon" do
@@ -690,6 +696,29 @@ describe Collection do
         expect(collection_item.reload.anonymous).to be_truthy
         expect(collected_work.reload.in_anon_collection).to be_truthy
       end
+    end
+  end
+
+  describe "#destroy" do
+    it "destroys the collection when it has no challenge" do
+      collection = create(:collection)
+      expect { collection.destroy! }
+        .not_to raise_error
+      expect(Collection.exists?(collection.id)).to be false
+    end
+    it "destroys the collection and its gift exchange challenge" do
+      challenge = create(:gift_exchange)
+      collection = create(:collection, challenge: challenge)
+      collection.destroy!
+      expect(Collection.exists?(collection.id)).to be false
+      expect(GiftExchange.exists?(challenge.id)).to be false
+    end
+    it "destroys the collection and its prompt meme challenge" do
+      challenge = create(:prompt_meme)
+      collection = create(:collection, challenge: challenge)
+      collection.destroy!
+      expect(Collection.exists?(collection.id)).to be false
+      expect(PromptMeme.exists?(challenge.id)).to be false
     end
   end
 end

@@ -12,7 +12,6 @@ module OtwSanitize
       archiveorg: %r{^archive\.org/embed/},
       bilibili: %r{^(player\.)?bilibili\.com/},
       criticalcommons: %r{^criticalcommons\.org/},
-      google: %r{^google\.com/},
       podfic: %r{^podfic\.com/},
       soundcloud: %r{^(w\.)?soundcloud\.com/},
       spotify: %r{^(open\.)?spotify\.com/},
@@ -23,8 +22,8 @@ module OtwSanitize
     }.freeze
 
     ALLOWS_FLASHVARS = %i[
-      criticalcommons eighttracks google
-      podfic soundcloud spotify viddersnet
+      criticalcommons eighttracks podfic
+      soundcloud spotify viddersnet
     ].freeze
 
     SUPPORTS_HTTPS = %i[
@@ -161,7 +160,7 @@ module OtwSanitize
             allowfullscreen height src type width
           ] + optional_embed_attributes,
           "iframe" => %w[
-            allowfullscreen frameborder height src title
+            allow allowfullscreen frameborder height src title
             class type width
           ]
         }
@@ -171,6 +170,7 @@ module OtwSanitize
         disable_scripts(node)
         node["flashvars"] = "" unless allows_flashvars?
       end
+      restrict_iframe_allow_attribute if node_name == "iframe"
       { node_allowlist: [node] }
     end
 
@@ -182,6 +182,18 @@ module OtwSanitize
       embed_node.search("param").each do |param_node|
         param_node.unlink if param_node[:name].casecmp?("allowscriptaccess") ||
                              param_node[:name].casecmp?("allownetworking")
+      end
+    end
+
+    # Restrict the iframe "allow" attribute to only the "fullscreen" directive.
+    # Removes the attribute entirely if "fullscreen" is not present.
+    def restrict_iframe_allow_attribute
+      return if node["allow"].blank?
+
+      if node["allow"].split(/[\s;,]+/).include?("fullscreen")
+        node["allow"] = "fullscreen"
+      else
+        node.remove_attribute("allow")
       end
     end
 

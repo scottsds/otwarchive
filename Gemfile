@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-ruby "~> 3.4.6"
+ruby "~> 3.4.12"
 
 gem 'test-unit', '~> 3.2'
 
@@ -37,7 +37,6 @@ gem "lograge" # https://github.com/roidrage/lograge
 gem 'will_paginate', '>=3.0.2'
 gem "pagy", "~> 9.3"
 gem 'acts_as_list', '~> 0.9.7'
-gem 'akismetor'
 
 gem 'httparty'
 gem "csv", "~> 3.3.5"
@@ -61,7 +60,7 @@ gem "terrapin"
 gem 'fastimage'
 
 # Gems for authentication
-gem "devise", git: "https://github.com/otwcode/devise", ref: "fade89f"
+gem "devise", git: "https://github.com/otwcode/devise", ref: "5dd846e"
 gem "devise-async" # To mails through queues
 gem "bcrypt"
 gem "devise-pwned_password"
@@ -125,7 +124,7 @@ group :test do
   gem 'capybara-screenshot'
   gem 'cucumber-rails', require: false
   gem 'launchy'    # So you can do Then show me the page
-  
+
   # Record and replay data from external URLs
   gem "vcr", "~> 6.2"
   gem "webmock"
@@ -139,7 +138,6 @@ group :test do
 end
 
 group :test, :development do
-  gem 'awesome_print'
   gem 'brakeman'
   gem 'pry-byebug'
   gem 'whiny_validation'
@@ -150,7 +148,6 @@ end
 
 group :development do
   gem 'bundler-audit'
-  gem 'active_record_query_trace', '~> 1.6', '>= 1.6.1'
 end
 
 group :linters do
@@ -173,7 +170,7 @@ gem 'rvm-capistrano'
 # Use unicorn as the web server
 gem 'unicorn', '~> 5.5', require: false
 # Install puma so we can migrate to it
-gem "puma", "~> 6.5.0"
+gem "puma", "~> 7.2.1"
 # Use god as the monitor
 gem 'god', '~> 0.13.7'
 

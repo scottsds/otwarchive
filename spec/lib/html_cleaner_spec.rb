@@ -12,7 +12,7 @@ describe HtmlCleaner do
     ArchiveConfig.FIELDS_ALLOWING_MEDIA_EMBEDS.each do |field|
       context "#{field} is configured to allow media embeds" do
         %w[youtube.com youtube-nocookie.com vimeo.com player.vimeo.com 
-           vidders.net criticalcommons.org google.com podfic.com archive.org
+           vidders.net criticalcommons.org podfic.com archive.org
            open.spotify.com spotify.com w.soundcloud.com soundcloud.com viddertube.com
            bilibili.com player.bilibili.com 4shared.com/web/embed audio.com/embed/audio].each do |source|
 
@@ -43,14 +43,6 @@ describe HtmlCleaner do
           end
         end
 
-        it "keeps google player embeds without closing tag" do
-          # HTML5 disallows </embed>, according to https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/embed#technical_summary
-          html1 = '<embed type="application/x-shockwave-flash" flashvars="audioUrl=http://dl.dropbox.com/u/123/foo.mp3" src="http://www.google.com/reader/ui/123-audio-player.swf" width="400" height="27" allowscriptaccess="never" allownetworking="internal">'
-          html2 = "#{html1}</embed>"
-          result = sanitize_value(field, html2)
-          expect(result).to eq(html1)
-        end
-
         it "strips embeds with unknown source" do
           html = '<embed src="http://www.evil.org"></embed>'
           result = sanitize_value(field, html)
@@ -61,6 +53,31 @@ describe HtmlCleaner do
           html = '<iframe src="http://archive.org/embed/../123/wrong/456.html"></iframe>'
           result = sanitize_value(field, html)
           expect(result).to be_empty
+        end
+
+        it "keeps allow=\"fullscreen\" on iframes from allowed sources" do
+          html = '<iframe width="560" height="315" src="//vimeo.com/embed/123" allow="fullscreen" frameborder="0"></iframe>'
+          result = sanitize_value(field, html)
+          expect(result).to include('allow="fullscreen"')
+        end
+
+        it "restricts allow attribute to just fullscreen" do
+          html = '<iframe width="560" height="315" src="//vimeo.com/embed/123" allow="fullscreen; autoplay" frameborder="0"></iframe>'
+          result = sanitize_value(field, html)
+          expect(result).to include('allow="fullscreen"')
+          expect(result).not_to include("autoplay")
+        end
+
+        it "strips allow attribute if it does not include fullscreen" do
+          html = '<iframe width="560" height="315" src="//vimeo.com/embed/123" allow="autoplay" frameborder="0"></iframe>'
+          result = sanitize_value(field, html)
+          expect(result).not_to include("allow=")
+        end
+
+        it "keeps legacy allowfullscreen on iframes" do
+          html = '<iframe width="560" height="315" src="//vimeo.com/embed/123" allowfullscreen frameborder="0"></iframe>'
+          result = sanitize_value(field, html)
+          expect(result).to include("allowfullscreen")
         end
 
         %w[criticalcommons.org].each do |source|
@@ -516,6 +533,12 @@ describe HtmlCleaner do
         doc = Nokogiri::HTML.fragment(result)
 
         expect(doc.xpath("./details[@open]")).to be_empty
+      end
+
+      it "preserves allowed global attributes in #{field}" do
+        html = '<p align="left" dir="ltr" lang="en" title="text title">some text</p>'
+        result = sanitize_value(field, html)
+        expect(result).to include(html)
       end
     end
   end
@@ -1171,6 +1194,8 @@ describe HtmlCleaner do
 
   describe "strip_images" do
     let(:result) { "Hi!  Bye" }
+    let(:result_for_malformed_html) { "Hi! " }
+    let(:result_for_multiline_html) { "Hi!  Bye\n" }
 
     context "without keep_src" do
       it "removes the img tag entirely when the src uses double quotes" do
@@ -1183,9 +1208,9 @@ describe HtmlCleaner do
         expect(strip_images(string)).to eq(result)
       end
 
-      it "removes the img tag entirely when the src uses mismatched quotes" do
+      it "removes the img tag and everything after when the src uses mismatched quotes" do
         string = "Hi! <img src=\"http://example.org/image.png'> Bye"
-        expect(strip_images(string)).to eq(result)
+        expect(strip_images(string)).to eq(result_for_malformed_html)
       end
 
       it "removes the img tag entirely when the src is missing" do
@@ -1193,9 +1218,19 @@ describe HtmlCleaner do
         expect(strip_images(string)).to eq(result)
       end
 
-      it "removes the img tag entirely when the src is missing a closing quotation mark" do
+      it "removes the img tag and everything after it when the src is missing a closing quotation mark" do
         string = 'Hi! <img src="http://example.org/image.png /> Bye'
-        expect(strip_images(string)).to eq(result)
+        expect(strip_images(string)).to eq(result_for_malformed_html)
+      end
+
+      it "removes the img tag entirely when there are newlines between arguments" do
+        string = <<~HTML
+          Hi! <img
+           src="https://example.org/image.png
+           "
+           alt="something" /> Bye
+        HTML
+        expect(strip_images(string)).to eq(result_for_multiline_html)
       end
     end
 
@@ -1210,9 +1245,9 @@ describe HtmlCleaner do
         expect(strip_images(string, keep_src: false)).to eq(result)
       end
 
-      it "removes the img tag entirely when the src uses mismatched quotes" do
+      it "removes the img tag and everything after it when the src uses mismatched quotes" do
         string = "Hi! <img src=\"http://example.org/image.png'> Bye"
-        expect(strip_images(string, keep_src: false)).to eq(result)
+        expect(strip_images(string, keep_src: false)).to eq(result_for_malformed_html)
       end
 
       it "removes the img tag entirely when the src is missing" do
@@ -1220,28 +1255,64 @@ describe HtmlCleaner do
         expect(strip_images(string, keep_src: false)).to eq(result)
       end
 
-      it "removes the img tag entirely when the src is missing a closing quotation mark" do
+      it "removes the img tag and everything after it when the src is missing a closing quotation mark" do
         string = 'Hi! <img src="http://example.org/image.png /> Bye'
-        expect(strip_images(string, keep_src: false)).to eq(result)
+        expect(strip_images(string, keep_src: false)).to eq(result_for_malformed_html)
+      end
+
+      it "removes the img tag entirely when there are newlines between arguments" do
+        string = <<~HTML
+          Hi! <img
+           src="https://example.org/image.png
+           "
+           alt="something" /> Bye
+        HTML
+        expect(strip_images(string, keep_src: false)).to eq(result_for_multiline_html)
       end
     end
 
     context "with keep_src: true" do
       it "keeps the img tag attributes" do
         string = 'Hi! <img src="http://example.org/image.png" alt=\'something\'> Bye'
-        result = 'Hi! img src="http://example.org/image.png" alt=\'something\' Bye'
+        result = 'Hi! img src="http://example.org/image.png" alt="something" Bye'
+        expect(strip_images(string, keep_src: true)).to eq(result)
+      end
+
+      it "keeps the img tag attributes when there are newlines between arguments" do
+        string = <<~HTML
+          Hi! <img
+           src="https://example.org/image.png
+           "
+           alt="something" /> Bye
+        HTML
+        result = <<~EXPECTED
+          Hi! img src="https://example.org/image.png
+           " alt="something" Bye
+        EXPECTED
         expect(strip_images(string, keep_src: true)).to eq(result)
       end
 
       it "does not keep tag trailing slash without a space" do
         string = 'Hi! <img src="http://example.org/image.png" alt=\'something\' /> Bye'
-        result = 'Hi! img src="http://example.org/image.png" alt=\'something\' Bye'
+        result = 'Hi! img src="http://example.org/image.png" alt="something" Bye'
         expect(strip_images(string, keep_src: true)).to eq(result)
       end
 
       it "does not keep tag trailing slash with a space" do
         string = 'Hi! <img src="http://example.org/image.png" alt=\'something\'/> Bye'
-        result = 'Hi! img src="http://example.org/image.png" alt=\'something\' Bye'
+        result = 'Hi! img src="http://example.org/image.png" alt="something" Bye'
+        expect(strip_images(string, keep_src: true)).to eq(result)
+      end
+
+      it "escapes the values within the element's attributes" do
+        string = 'Hi! <img src="https://<span>" alt="<script/src=\'http://ha.ckers.org/xss.js\'>"> Bye'
+        result = 'Hi! img src="https://&lt;span&gt;" alt="&lt;script/src=\'http://ha.ckers.org/xss.js\'&gt;" Bye'
+        expect(strip_images(string, keep_src: true)).to eq(result)
+      end
+
+      it "escapes the value within the alt attribute when it contains an initial >" do
+        string = 'Hi! <img src="https://example.com" alt="><script src=\'http://ha.ckers.org/xss.js\'>"> Bye'
+        result = 'Hi! img src="https://example.com" alt="&gt;&lt;script src=\'http://ha.ckers.org/xss.js\'&gt;" Bye'
         expect(strip_images(string, keep_src: true)).to eq(result)
       end
     end

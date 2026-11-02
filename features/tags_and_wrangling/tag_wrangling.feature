@@ -5,7 +5,7 @@ Feature: Tag wrangling
 
     Given the role "tag_wrangler"
     When I am logged in as "dizmo"
-    Then I should not see "Tag Wrangling" within "#header"
+    Then I should not see "Tag Wrangling" within "#greeting"
     When I am logged in as a "tag_wrangling" admin
       And I go to the manage users page
       And I fill in "Name" with "dizmo"
@@ -17,7 +17,7 @@ Feature: Tag wrangling
     Then I should see "User was successfully updated"
     # accessing wrangling pages
     When I am logged in as "dizmo"
-      And I follow "Tag Wrangling" within "#header"
+      And I follow "Tag Wrangling" within "#greeting"
     Then I should see "Wrangling Home"
     # no access otherwise
     When I log out
@@ -371,6 +371,8 @@ Feature: Tag wrangling
     Given a canonical freeform "Angst"
       And a canonical freeform "Angstc"
       And it is currently 1 second from now
+      # The waits are here so we can be sure the tags are created/attached in
+      # a non-sorted order, so the test can check that reordering is happening
       And a canonical freeform "Angstb"
       And it is currently 1 second from now
       And a canonical freeform "Angsta"
@@ -382,6 +384,24 @@ Feature: Tag wrangling
     When I view the tag "Angst"
     Then "Angsta" should appear before "Angstb"
       And "Angstb" should appear before "Angstc"
+
+  Scenario: Metatags are listed in alphabetical order by sortable name
+    Given a canonical freeform "Sex and Feels and Pain"
+      And a canonical freeform "Smut"
+      And it is currently 1 second from now
+      # The waits are here so we can be sure the tags are created/attached in
+      # a non-sorted order, so the test can check that reordering is happening
+      And a canonical freeform "The Angst"
+      And it is currently 1 second from now
+      And a canonical freeform "Fluff"
+      And "Smut" is a metatag of the freeform "Sex and Feels and Pain"
+      And it is currently 1 second from now
+      And "The Angst" is a metatag of the freeform "Sex and Feels and Pain"
+      And it is currently 1 second from now
+      And "Fluff" is a metatag of the freeform "Sex and Feels and Pain"
+    When I view the tag "Sex and Feels and Pain"
+    Then "The Angst" should appear before "Fluff"
+      And "Fluff" should appear before "Smut"
 
   Scenario: Tags in mass wrangling bins should have a link to the comment page with the comment count.
 
@@ -408,3 +428,12 @@ Feature: Tag wrangling
       And I view the unwrangled character bin for "World Domination"
     Then I should see "World Domination"
       And I should see "Comments (1)"
+
+  Scenario: Unwrangleable tags should not appear in mass wrangling bins
+    Given I am logged in as a tag wrangler
+      And a freeform exists with name: "Unwrangleable Nonsense", unwrangleable: true
+      And I post the work "My Plan" with freeform "Unwrangleable Nonsense" with second freeform "Wrangleable Sense"
+      And all indexing jobs have been run
+    When I go to the freeform mass bin
+      Then I should see "Wrangleable Sense"
+      Then I should not see "Unwrangleable Nonsense"

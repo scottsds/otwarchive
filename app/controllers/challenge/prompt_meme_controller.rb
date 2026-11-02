@@ -1,9 +1,10 @@
 class Challenge::PromptMemeController < ChallengesController
 
-  before_action :users_only
+  before_action :users_only, except: [:edit]
   before_action :load_collection
   before_action :load_challenge, except: [:new, :create]
-  before_action :collection_owners_only, only: [:new, :create, :edit, :update, :destroy]
+  before_action :collection_owners_or_privileged_admins_only, only: [:edit]
+  before_action :collection_owners_only, only: [:new, :create, :update, :destroy]
 
   # ACTIONS
 
@@ -41,7 +42,7 @@ class Challenge::PromptMemeController < ChallengesController
       flash[:notice] = 'Challenge was successfully updated.'
       # expire the cache on the signup form
       ActionController::Base.new.expire_fragment('challenge_signups/new')
-      redirect_to @collection
+      redirect_to collection_path(@collection)
     else
       render action: :edit
     end
@@ -50,7 +51,7 @@ class Challenge::PromptMemeController < ChallengesController
   def destroy
     @challenge.destroy
     flash[:notice] = 'Challenge settings were deleted.'
-    redirect_to @collection
+    redirect_to collection_path(@collection)
   end
 
   private

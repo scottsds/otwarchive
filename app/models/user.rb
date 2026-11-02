@@ -24,16 +24,19 @@ class User < ApplicationRecord
   # Allows other models to get the current user with User.current_user
   thread_cattr_accessor :current_user
 
+  # Devise confirmable may undo email modifications in before_update, so canonicalize_email has to run after it
+  before_create :canonicalize_email
+  before_update :canonicalize_email, if: :will_save_change_to_email?
+
   # Authorization plugin
   acts_as_authorized_user
   acts_as_authorizable
   has_many :roles_users
   has_many :roles, through: :roles_users, dependent: :destroy
 
-  ### BETA INVITATIONS ###
   has_many :invitations, as: :creator
   has_one :invitation, as: :invitee
-  has_many :user_invite_requests, dependent: :destroy
+  has_many :user_invite_requests, dependent: :destroy 
 
   attr_accessor :invitation_token
   before_create :create_default_associateds
@@ -174,6 +177,10 @@ class User < ApplicationRecord
   has_many :log_items, dependent: :destroy
   validates_associated :log_items
 
+  def canonicalize_email
+    self.canonical_email = EmailCanonicalizer.canonicalize(self.email) if self.email
+  end
+
   def expire_caches
     return unless saved_change_to_login?
 
@@ -183,6 +190,7 @@ class User < ApplicationRecord
       work.touch
       work.expire_caches
     end
+    self.gift_works.touch_all
   end
 
   def remove_user_from_kudos
@@ -430,6 +438,12 @@ class User < ApplicationRecord
     (Time.current - created_at).seconds.in_days.to_i < AdminSetting.current.account_age_threshold_for_comment_spam_check
   end
 
+  def should_rate_limit_comments?
+    # When comment_count_threshold_for_comment_rate_limit is 0, no users should be rate limited based on comment count, so don't count the comments at all
+    based_on_comments_count = AdminSetting.current.comment_count_threshold_for_comment_rate_limit.zero? ? false : comments.count < AdminSetting.current.comment_count_threshold_for_comment_rate_limit
+    should_spam_check_comments? || based_on_comments_count
+  end
+
   # Creates log item tracking changes to user
   def create_log_item(options = {})
     options.reverse_merge! note: "System Generated", user_id: self.id
@@ -472,8 +486,6 @@ class User < ApplicationRecord
   def sole_owned_collections
     self.collections.to_a.delete_if { |collection| !(collection.all_owners - pseuds).empty? }
   end
-
-  ### BETA INVITATIONS ###
 
   # If a new user has an invitation_token (meaning they were invited), the method sets the redeemed_at column for that invitation to Time.now
   def mark_invitation_redeemed
